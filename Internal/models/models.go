@@ -21,13 +21,16 @@ type NewUser struct {
 
 type Company struct {
 	gorm.Model
+	// CompanyId   uint   `json:"companyId"`
 	CompanyName string `json:"companyname"`
-	JobRole     string `json:"jobRole"`
+	Location    string `json:"location"`
+	Jobs []Job  `json:"jobs,omitempty" gorm:"foreignKey:CompanyId"`
 }
 
-// employee contains information needed to create a Employee details.
-// type Employee struct {
-// 	EmpName string  `json:"emp_name" validate:"required"`
-// 	EmpRole int     `json:"emprole" validate:"required,number"`
-// 	EmpId   float64 `json:"emp_id" validate:"required,number,gt=0"`
-// }
+type Job struct {
+	gorm.Model
+	Name       string `json:"title"`
+	Field      string `json:"field"`
+	Experience uint   `json:"experience"`
+	CompanyId  uint64 `json:"companyId"`
+}

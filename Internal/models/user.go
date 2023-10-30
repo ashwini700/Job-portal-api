@@ -19,9 +19,99 @@ type Conn struct {
 	db *gorm.DB
 }
 
+// Add jobs
+
+func (s *Conn) JobbyCompId(j Job,compid string) (Job, error) {
+	compId, _ := strconv.ParseUint(compid, 10, 64)
+
+	job := Job{
+		Name : j.Name,
+		Field: j.Field,
+		Experience:j.Experience, 
+		CompanyId:  compId,
+	}
+	err := s.db.Create(&job).Error
+	if err != nil {
+		return Job{}, err
+	}
+	return job, nil
+}
+
+// func (s *Conn) JobbyCompId(jobs []Job, compId string) ([]Job, error) {
+// 	companyId, err := strconv.ParseUint(compId, 10, 64)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	for _, j := range jobs {
+// 		job := Job{
+// 			Name:       j.Name,
+// 			Field:      j.Field,
+// 			Experience: j.Experience,
+// 			CompanyId:  companyId,
+// 		}
+// 		err := s.db.Create(&job).Error
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 	}
+// 	return jobs, nil
+// }
+
+// job by company id
+func (s *Conn) FetchJobByCompanyId(ctx context.Context, companyId string) ([]Job, error) {
+	var listOfJobs []Job
+	tx := s.db.WithContext(ctx).Where("company_id = ?", companyId)
+	err := tx.Find(&listOfJobs).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return listOfJobs, nil
+}
+
+// Job by id
+func (s *Conn) GetJobById(ctx context.Context, jobId string) (Job, error) {
+	var jobData Job
+	tx := s.db.WithContext(ctx).Where("ID = ?", jobId)
+	err := tx.Find(&jobData).Error
+	if err != nil {
+		return Job{}, err
+	}
+
+	return jobData, nil
+}
+
+func (s *Conn) GetAllJobs(ctx context.Context) ([]Job, error) {
+	var listJobs []Job
+	tx := s.db.WithContext(ctx)
+	err := tx.Find(&listJobs).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return listJobs, nil
+}
+
 // ViewCompany implements Service.
-func (*Conn) ViewCompany(ctx context.Context, userId string) (float64, error) {
-	panic("unimplemented")
+func (s *Conn) ViewCompany(ctx context.Context) ([]Company, error) {
+	var companies []Company
+	tx := s.db.WithContext(ctx)
+	err := tx.Find(&companies).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return companies, nil
+}
+
+func (s *Conn) FetchcompanyID(ctx context.Context, companyId string) (Company, error) {
+	var comp Company
+	tx := s.db.WithContext(ctx).Where("id = ?", companyId)
+	err := tx.Find(&comp).Error
+	if err != nil {
+		return Company{}, err
+	}
+	return comp, nil
 }
 
 // NewService is the constructor for the Conn struct.
@@ -68,7 +158,7 @@ func (s *Conn) CreateCompany(ctx context.Context, ne Company) (Company, error) {
 	//prepare company record
 	c := Company{
 		CompanyName: ne.CompanyName,
-		JobRole:     ne.JobRole,
+		Location:    ne.Location,
 	}
 
 	//create new company database
@@ -78,33 +168,6 @@ func (s *Conn) CreateCompany(ctx context.Context, ne Company) (Company, error) {
 	}
 	return c, nil
 }
-
-// ViewCompany implements Service.
-// func (com *Conn) ViewCompany(ctx context.Context, Id string) ([]Company, float64, error) {
-// 	var comp = make([]Company, 0, 10)
-// 	tx := com.db.WithContext(ctx).Where("Id = ?", Id)
-// 	err := tx.Find(&comp).Error
-// 	if err != nil {
-// 		return nil, 0, err
-// 	}
-// 	totalCompanies, err := CalculateTotalComp(comp, "companies")
-// 	if err != nil {
-// 		return nil, 0, err
-// 	}
-// 	return comp, totalCompanies, nil
-// }
-
-// func CalculateTotalComp(CompanyName []Company, category string) (float64, error) {
-// 	if CompanyName == nil {
-// 		return 0, errors.New("company doesn't exist")
-// 	}
-// 	// Compute the total cost
-// 	var totalCompanies float64
-// 	for _, company := range CompanyName {
-// 		totalCompanies += float64(company.ID)
-// 	}
-// 	return totalCompanies, nil
-// }
 
 // Authenticate is a method that checks a user's provided email and password against the database.
 func (s *Conn) Authenticate(ctx context.Context, email, password string) (jwt.RegisteredClaims,

@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog/log"
 )
 
@@ -18,6 +17,7 @@ type handler struct {
 	a *auth.Auth
 }
 
+// function to add or register companies
 func (h *handler) AddCompany(c *gin.Context) {
 	ctx := c.Request.Context()
 	traceId, ok := ctx.Value(middleware.TraceIdKey).(string)
@@ -161,6 +161,7 @@ func (h *handler) Login(c *gin.Context) {
 
 }
 
+// fetch all the companies
 func (h *handler) ViewCompany(c *gin.Context) {
 	ctx := c.Request.Context()
 	traceId, ok := ctx.Value(middleware.TraceIdKey).(string)
@@ -169,18 +170,114 @@ func (h *handler) ViewCompany(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"msg": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
-	claims, ok := ctx.Value(auth.Key).(jwt.RegisteredClaims)
-	if !ok {
-		log.Error().Str("Trace Id", traceId).Msg("login first")
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": http.StatusText(http.StatusUnauthorized)})
-		return
-	}
-	companies, err := h.s.ViewCompany(ctx, claims.Subject)
+
+	companies, err := h.s.ViewCompany(ctx)
 	if err != nil {
 		log.Error().Err(err).Str("Trace Id", traceId)
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"msg": "problem in viewing companies"})
 		return
 	}
-	m := gin.H{"c": companies}
-	c.JSON(http.StatusOK, m)
+	// m := gin.H{"c": companies}
+	c.JSON(http.StatusOK, companies)
+}
+
+// fetch company by id
+func (h *handler) companyID(c *gin.Context) {
+	ctx := c.Request.Context()
+	traceId, ok := ctx.Value(middleware.TraceIdKey).(string)
+	if !ok {
+		// If the traceId isn't found in the request, log an error and return
+		log.Error().Msg("TrackerId missing from context")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"msg": http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+	companyId := c.Param("id")
+	companySources, err := h.s.FetchcompanyID(ctx, companyId)
+	if err != nil {
+		log.Error().Err(err).Str("Tracker Id", traceId)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"msg": "problem in viewing company by id"})
+		return
+	}
+	c.JSON(http.StatusOK, companySources)
+
+}
+
+// add jobs by Id
+func (h *handler) addJobsById(c *gin.Context) {
+	ctx := c.Request.Context()
+	traceId, ok := ctx.Value(middleware.TraceIdKey).(string)
+	if !ok {
+		log.Error().Msg("TrackerId missing from context")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"msg": http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+	compId:=c.Param("id")
+	var jobs models.Job
+	err := json.NewDecoder(c.Request.Body).Decode(&jobs)
+	if err != nil {
+		// If there is an error in decoding, log the error and return
+		log.Error().Err(err).Str("Tracker Id", traceId)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"msg": http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+	jobData,err:=h.s.JobbyCompId(jobs,compId)
+	if err != nil {
+		log.Error().Err(err).Str("Tracker Id", traceId).Msg("Add Job by companyId problem")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"msg": "Job creation failed"})
+		return
+	}
+	c.JSON(http.StatusCreated, jobData)
+}
+		////
+func (h *handler) JobbyCompId(c *gin.Context) {
+	ctx := c.Request.Context()
+	traceId, ok := ctx.Value(middleware.TraceIdKey).(string)
+	if !ok {
+		log.Error().Msg("TrackerId missing from context")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"msg": http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+	companyId := c.Param("companyId")
+	listOfJobs, err := h.s.FetchJobByCompanyId(ctx, companyId)
+	if err != nil {
+		log.Error().Err(err).Str("Tracker Id", traceId)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"msg": "problem in viewing list of company by ID"})
+		return
+	}
+	c.JSON(http.StatusOK, listOfJobs)
+}
+
+func (h *handler) fetchJobById(c *gin.Context) {
+	ctx := c.Request.Context()
+	traceId, ok := ctx.Value(middleware.TraceIdKey).(string)
+	if !ok {
+		log.Error().Msg("TraceId missing from context")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"msg": http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+	jobId := c.Param("ID")
+	job, err := h.s.GetJobById(ctx, jobId)
+	if err != nil {
+		log.Error().Err(err).Str("Trace Id", traceId)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"msg": "problem in viewing list of company by ID"})
+		return
+	}
+	c.JSON(http.StatusOK, job)
+}
+
+func (h *handler) GetAllJobs(c *gin.Context) {
+	ctx := c.Request.Context()
+	traceId, ok := ctx.Value(middleware.TraceIdKey).(string)
+	if !ok {
+		log.Error().Msg("TrackerId missing from context")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"msg": http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+	job, err := h.s.GetAllJobs(ctx)
+	if err != nil {
+		log.Error().Err(err).Str("Tracker Id", traceId)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"msg": "problem in viewing list of company by ID"})
+		return
+	}
+	c.JSON(http.StatusOK, job)
 }

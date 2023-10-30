@@ -30,8 +30,14 @@ func API(a *auth.Auth, c *models.Conn) *gin.Engine {
 	r.GET("/check", m.Authenticate(check))
 	r.POST("/signup", h.Signup)
 	r.POST("/login", h.Login)
-	r.POST("/company/add", h.AddCompany)
-	r.GET("/company/add", h.ViewCompany)
+	r.POST("/createcompany/add", h.AddCompany)
+	r.GET("/viewcompany/view", h.ViewCompany)
+	r.GET("/byIdcompany/:id", h.companyID)
+	r.POST("/addJobs/:id", h.addJobsById)
+	r.GET("/fetchJob/:id", h.fetchJobById)
+	r.POST("/JobbyCompId/:id", h.JobbyCompId)
+	r.GET("/getAllJob", h.GetAllJobs)
+
 	return r
 }
 
